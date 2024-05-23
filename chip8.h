@@ -27,7 +27,7 @@ class Chip8 {
 
         unsigned short sp; //stack pointer
 
-        unsigned char key[16]; //HEX based keypad from 0x0-0xF. Use this variable to store current state of keypad. Each key has 16 bits :)
+        unsigned char key[16]; //HEX based keypad from 0x0-0xF. Use this variable to store current state of keypad.
     public:
         void loadGame(std::string filename);
         void initialize(); // Initialize registers and memory once

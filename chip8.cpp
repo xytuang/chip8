@@ -171,19 +171,18 @@ void chip8::emulateCycle(){
                 case 0x0005: //Opcode format: 8xy5. Set Vx = Vx - Vy. Set Vf to 1 if Vx > Vy. Store result in Vx. 
                     char vx = this->V[(this->opcode & 0x0F00) >> 8];
                     char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    int sub = vx - vy;
                     if (Vx > Vy){
                         this->V[0xF] = 1;
                     }
                     else {
                         this->V[0xF] = 0;
                     }
-                    this->V[(this->opcode & 0x0F00) >> 8] = sub & 0xFF; //ERROR SUSPECT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    this->V[(this->opcode & 0x0F00) >> 8] = vx - vy;
                     this->pc += 2;
                     break;
 
                 case 0x0006: //Opcode format: 8xy6. If LSB of Vx is 1, set Vf to 1. Divide Vx by 2.
-                    if (this->V[(this->opcode & 0x0F00) >> 8] % 2 == 1){
+                    if (this->V[(this->opcode & 0x0F00) >> 8] & 0x01 == 1){
                         this->V[0xF] = 1;
                     }
                     else {
@@ -194,20 +193,28 @@ void chip8::emulateCycle(){
                     break;
 
                 case 0x0007: //Opcode format: 8xy7. Set Vx = Vy - Vx. Set Vf to 1 if Vy > Vx. Store result in Vx.
+
                     char vx = this->V[(this->opcode & 0x0F00) >> 8];
                     char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    int sub = vy - vx;
-                    if (Vx > Vy){
+                    if (vy > vx){
                         this->V[0xF] = 1;
                     }
                     else {
                         this->V[0xF] = 0;
                     }
-                    this->V[(this->opcode & 0x0F00) >> 8] = sub & 0xFF; //ERROR SUSPECT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    this->V[(this->opcode & 0x0F00) >> 8] = vy - vx;
                     this->pc += 2;
                     break;
 
                 case 0x000E: //Opcode format: 8xyE. If MSB of Vx is 1, set Vf to 1. Multiply Vx by 2.
+                    if (this->V[(this->opcode & 0x0F00) >> 8] & 0x80 == 1){
+                        this->V[0xF] = 1;
+                    }
+                    else {
+                        this->V[0xF] = 0;
+                    }
+                    this->V[(this->opcode & 0x0F00) >> 8] = (this->V[(this->opcode & 0x0F00) >> 8]) * 2;
+                    this->pc += 2;
                     break;
 
                 default: //Unknown command.
@@ -215,33 +222,123 @@ void chip8::emulateCycle(){
 
             }
 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
+        case 0x9000: //Opcode format: 9xy0. Skip next instruction if Vx != Vy. Compare values in Vx and Vy. If not equal, increment PC by 4
+            if (this->V[(this->opcode & 0x0F00) >> 8] != this->V[(this->opcode & 0x00F0) >> 4]){
+                this->pc += 4;
+            }
+            else {
+                this->pc += 2;
+            }
+            break;
+
+        case 0xA000: //Opcode format: ANNN. Set I to address NNN. Value of register I is set to NNN.
+            this->I = this->opcode & 0x0FFF;
+            this->pc += 2;
             break; 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
+
+        case 0xB000: //Opcode format: BNNN. Jump to location V0 + NNN. Set PC to value in V0 + NNN.
+            this->pc = this->V[0] + (this->opcode & 0x0FFF);
             break; 
-        case 0xA000: //set I to address NNN
+
+        case 0xC000: //Opcode format: Cxkk. Set Vx = random byte AND kk. Generate random number from 0 to 255, and it with kk. Store result in Vx.
+            unsigned char randomByte = rand() % 256;
+            this->V[(this->opcode & 0x0F00) >> 8] = randomByte & (this->opcode & 0x00FF);
+            this->pc += 2;
+            break; 
+
+        case 0xD000: //set I to address NNN INCOMPLETE!!!!!!!!!!!!!!!!!!!
             this->I = this->opcode & 0xFFF;
             break; 
 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
-            break; 
+        case 0xE000: //Opcode format: ExVW, where VW is either 9E of A1
+            switch (this->opcode & 0x00FF) {
+                case 0x009E: //Opcode format: Ex9E. Skip next instruction if key with value of Vx is pressed. If key corresponding to value in Vx is pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 1) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
-            break; 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
-            break; 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
-            break; 
+                case 0x00A1: //Opcode format: ExA1. Skip next instruction if key with value of Vx is not pressed. If key corresponding to value in Vx is not pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 0) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
+                default: //Unknown command
+                    break;
+            }
 
-        case 0xA000: //set I to address NNN
-            this->I = this->opcode & 0xFFF;
-            break; 
+        case 0xF000: //Opcode format: FxVW, where VW is in 07, 0A, 15, 18, 1E,29, 33, 55, 65
+            switch (this->opcode & 0x00FF) {
+                case 0x0007: //Opcode format: Fx07. Set Vx = delay timer value. 
+                    this->V[(this->opcode & 0x0F00) >> 8] = this->delayTimer;
+                    pc += 2;
+                    break;
+
+                case 0x000A: //Opcode format: Fx0A. Wait for key press. Store value of key in Vx. INCOMPLETE!!!!!!!!!!
+                    this->pc += 2;
+                    break;
+
+                case 0x009E: //Opcode format: Ex9E. Skip next instruction if key with value of Vx is pressed. If key corresponding to value in Vx is pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 1) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
+
+                case 0x0015: //Opcode format: Fx15. Set delay timer = value in Vx. 
+                    this->delayTimer = this->V[(this->opcode & 0x0F00) >> 8];
+                    pc += 2;
+                    break;
+
+                case 0x0018: //Opcode format: Fx18. Set sound timer = value in Vx. 
+                    this->soundTimer = this->V[(this->opcode & 0x0F00) >> 8];
+                    pc += 2;
+                    break;
+
+
+                case 0x001E: //Opcode format: Fx1E. Set I = I + Vx. 
+                    this->I += this->V[(this->opcode & 0x0F00) >> 8];
+                    pc += 2;
+                    break;
+
+                //STOPPED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                case 0x009E: //Opcode format: Ex9E. Skip next instruction if key with value of Vx is pressed. If key corresponding to value in Vx is pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 1) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
+
+                case 0x00A1: //Opcode format: ExA1. Skip next instruction if key with value of Vx is not pressed. If key corresponding to value in Vx is not pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 0) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
+
+                case 0x00A1: //Opcode format: ExA1. Skip next instruction if key with value of Vx is not pressed. If key corresponding to value in Vx is not pressed, increment PC by 4
+                    if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 0) {
+                        this->pc += 4;
+                    }
+                    else {
+                        this->pc += 2;
+                    }
+                    break;
+                default: //Unknown command
+                    break;
+            }
     }
     // Execute opcode
 
