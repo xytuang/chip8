@@ -1,17 +1,20 @@
-cc = gcc
-CLAGS = -g -Wall
-LDFLAGS =
-LDLIBS =
+CXX = g++
+CXXFLAGS = -std=c++0x -Wall -g
+LDFLAGS = -rdynamic
 
-chip8: chip8.o
+SRCS = chip8.cpp
+OBJS = ${SRCS:.cpp=.o}
+HEADERS = 
 
-chip8.o: chip8.c
+MAIN = chip8
 
-.PHONY: clean
+all: ${MAIN}
+
+${MAIN}: ${OBJS}
+	${CXX} ${LDFLAGS} ${OBJS} -o ${MAIN}
+
+.cpp.o:
+	${CXX} ${CXXFLAGS} -c $< -o $@
 
 clean:
-	rm -f *.o a.out core chip8
-
-.PHONY: all
-all:
-	clean chip8
+	${RM} ${PROGS} ${MAIN} ${OBJS} *.o *~. 
