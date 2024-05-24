@@ -63,11 +63,9 @@ int main(int argc, char* argv[]) {
     // Temporary pixel buffer
     uint32_t pixels[2048];
 
-    //initialize chip8 system and load game into memory
-    chip8.initialize();
 
     load:
-    chip8.loadGame("pong");
+    chip8.loadGame(argv[1]);
 
     for(;;){
         chip8.emulateCycle();
