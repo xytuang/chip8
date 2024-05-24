@@ -2,11 +2,11 @@ CXX = g++
 CXXFLAGS = -std=c++0x -Wall -g
 LDFLAGS = -rdynamic
 
-SRCS = chip8.cpp
+SRCS = main.cpp chip8.cpp
 OBJS = ${SRCS:.cpp=.o}
 HEADERS = 
 
-MAIN = chip8
+MAIN = main
 
 all: ${MAIN}
 
