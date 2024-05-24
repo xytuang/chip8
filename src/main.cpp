@@ -77,12 +77,13 @@ int main(int argc, char* argv[]) {
 
             // Process keydown events
             if (e.type == SDL_KEYDOWN) {
-                if (e.key.keysym.sym == SDLK_ESCAPE)
+                if (e.key.keysym.sym == SDLK_ESCAPE){
                     exit(0);
+                }
 
-                if (e.key.keysym.sym == SDLK_F1)
-                    goto load;      // *gasp*, a goto statement!
-                                    // Used to reset/reload ROM
+                if (e.key.keysym.sym == SDLK_F1) {
+                    goto load; // Used to reset/reload ROM
+                }
 
                 for (int i = 0; i < 16; ++i) {
                     if (e.key.keysym.sym == keymap[i]) {
