@@ -18,7 +18,7 @@ void Chip8::loadGame(std::string filename) {
     FILE* rom = fopen(file_path, "rb");
     if (rom == NULL) {
         std::cerr << "Failed to open ROM" << std::endl;
-        return false;
+        exit(1);
     }
 
     // Get file size
@@ -30,14 +30,14 @@ void Chip8::loadGame(std::string filename) {
     char* rom_buffer = (char*) malloc(sizeof(char) * rom_size);
     if (rom_buffer == NULL) {
         std::cerr << "Failed to allocate memory for ROM" << std::endl;
-        return false;
+        exit(1);
     }
 
     // Copy ROM into buffer
     size_t result = fread(rom_buffer, sizeof(char), (size_t)rom_size, rom);
     if (result != rom_size) {
         std::cerr << "Failed to read ROM" << std::endl;
-        return false;
+        exit(1);
     }
 
     // Copy buffer to memory
@@ -49,19 +49,17 @@ void Chip8::loadGame(std::string filename) {
     }
     else {
         std::cerr << "ROM too large to fit in memory" << std::endl;
-        return false;
+        exit(1);
     }
 
     // Clean up
     fclose(rom);
     free(rom_buffer);
-
-    return true;
 }
 
 void Chip8::initialize(){
     // Initialize registers and memory once
-    this->pc == 0x200;
+    this->pc = 0x200;
     this->opcode = 0;
     this->I = 0;
     this->sp = 0;
@@ -83,7 +81,8 @@ void Chip8::initialize(){
         this->memory[i] = 0;
     }
     //load font set
-    this->fontset = {
+    unsigned char fontset[80] = 
+    {
         0xF0, 0x90, 0x90, 0x90, 0xF0, 
         0x20, 0x60, 0x20, 0x20, 0x70, 
         0xF0, 0x10, 0xF0, 0x80, 0xF0, 
@@ -100,12 +99,12 @@ void Chip8::initialize(){
         0xE0, 0x90, 0x90, 0x90, 0xE0,
         0xF0, 0x80, 0xF0, 0x80, 0xF0,
         0xF0, 0x80, 0xF0, 0x80, 0x80,
-        };
+    };
+
     for (int i = 0; i < 80; i++) {
-        this->memory[i] = this->fontset[i];
+        this->memory[i] = fontset[i];
     }
 
-    this->file.read(this->memory, this->fileSize);
 
     //reset timers
     this->delayTimer = 0;
@@ -113,7 +112,7 @@ void Chip8::initialize(){
     srand(time(NULL));
 }
 
-void chip8::emulateCycle(){
+void Chip8::emulateCycle(){
     // Fetch opcode
     this->opcode = memory[pc] << 8 | memory[pc+1];
     // Decode opcode -- 35 opcodes :)))))))
@@ -147,7 +146,7 @@ void chip8::emulateCycle(){
             break;
 
         case 0x3000: //Opcode format: 3xkk. Skip next instruction if Vx == kk. Compare register Vx and kk. If equal, increment PC by 4. Every instruction occupies 2 bytes.
-            if (this->V[(this->opcode & 0x0F00) >> 8] == this->opcode & 0x00FF) {
+            if (this->V[(this->opcode & 0x0F00) >> 8] == (this->opcode & 0x00FF)) {
                 this->pc += 4;
             }
             else {
@@ -156,7 +155,7 @@ void chip8::emulateCycle(){
             break; 
 
         case 0x4000: //Opcode format: 4xkk. Skip next instruction if Vx != kk. Compare register Vx and kk. If not equal, increment PC by 4. 
-            if (this->V[(this->opcode & 0x0F00) >> 8] != this->opcode & 0x00FF) {
+            if (this->V[(this->opcode & 0x0F00) >> 8] != (this->opcode & 0x00FF)) {
                 this->pc += 4;
             }
             else {
@@ -173,7 +172,7 @@ void chip8::emulateCycle(){
             }
             break; 
         case 0x6000: //Opcode format: 6xkk. Set Vx to kk. Put the value of kk into register Vx.
-            this->V[(this->opcode & 0x0F00)>>8] = this->opcode & 0x00FF;
+            this->V[(this->opcode & 0x0F00)>>8] = (this->opcode & 0x00FF);
             this->pc += 2;
             break; 
         case 0x7000: //Opcode format: 7xkk. Set Vx = Vx + kk. Add value of kk to value in register Vx, then store result in Vx. 
@@ -189,23 +188,17 @@ void chip8::emulateCycle(){
                     break;
 
                 case 0x0001: //Opcode format: 8xy1. Set Vx = Vx OR Vy. Bitwise OR on Vx and Vy, then store result in Vx.
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    this->V[this->opcode & 0x0F00] = vx | vy;
+                    this->V[this->opcode & 0x0F00] = this->V[(this->opcode & 0x0F00) >> 8] | this->V[(this->opcode & 0x00F0) >> 4];
                     this->pc += 2;
                     break;
 
                 case 0x0002: //Opcode format: 8xy2. Set Vx = Vx AND Vy. Bitwise AND on Vx and Vy, then store result in Vx. 
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    this->V[this->opcode & 0x0F00] = vx & vy;
+                    this->V[this->opcode & 0x0F00] = this->V[(this->opcode & 0x0F00) >> 8] & this->V[(this->opcode & 0x00F0) >> 4];
                     this->pc += 2;
                     break;
 
                 case 0x0003: //Opcode format: 8xy3. Set Vx = Vx XOR Vy. Bitwise XOR on Vx and Vy, then store result in Vx.
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    this->V[this->opcode & 0x0F00] = vx ^ vy;
+                    this->V[this->opcode & 0x0F00] = this->V[(this->opcode & 0x0F00) >> 8] ^ this->V[(this->opcode & 0x00F0) >> 4];
                     this->pc += 2;
                     break;
 
@@ -222,20 +215,19 @@ void chip8::emulateCycle(){
                     break;
 
                 case 0x0005: //Opcode format: 8xy5. Set Vx = Vx - Vy. Set Vf to 1 if Vx > Vy. Store result in Vx. 
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    if (Vx > Vy){
+                    if (this->V[(this->opcode & 0x0F00) >> 8] > this->V[(this->opcode & 0x00F0) >> 4]) {
                         this->V[0xF] = 1;
                     }
                     else {
                         this->V[0xF] = 0;
                     }
-                    this->V[(this->opcode & 0x0F00) >> 8] = vx - vy;
+
+                    this->V[this->opcode & 0x0F00] = this->V[(this->opcode & 0x0F00) >> 8] - this->V[(this->opcode & 0x00F0) >> 4];
                     this->pc += 2;
                     break;
 
                 case 0x0006: //Opcode format: 8xy6. If LSB of Vx is 1, set Vf to 1. Divide Vx by 2.
-                    if (this->V[(this->opcode & 0x0F00) >> 8] & 0x01 == 1){
+                    if ((this->V[(this->opcode & 0x0F00) >> 8] & 0x01) == 1){
                         this->V[0xF] = 1;
                     }
                     else {
@@ -247,20 +239,18 @@ void chip8::emulateCycle(){
 
                 case 0x0007: //Opcode format: 8xy7. Set Vx = Vy - Vx. Set Vf to 1 if Vy > Vx. Store result in Vx.
 
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    char vy = this->V[(this->opcode & 0x00F0) >> 4];
-                    if (vy > vx){
+                    if ( this->V[(this->opcode & 0x00F0) >> 4] > this->V[(this->opcode & 0x0F00) >> 8]){
                         this->V[0xF] = 1;
                     }
                     else {
                         this->V[0xF] = 0;
                     }
-                    this->V[(this->opcode & 0x0F00) >> 8] = vy - vx;
+                    this->V[(this->opcode & 0x0F00) >> 8] = this->V[(this->opcode & 0x00F0) >> 4] - this->V[(this->opcode & 0x0F00) >> 8];
                     this->pc += 2;
                     break;
 
                 case 0x000E: //Opcode format: 8xyE. If MSB of Vx is 1, set Vf to 1. Multiply Vx by 2.
-                    if (this->V[(this->opcode & 0x0F00) >> 8] & 0x80 == 1){
+                    if ((this->V[(this->opcode & 0x0F00) >> 8] & 0x80) == 1){
                         this->V[0xF] = 1;
                     }
                     else {
@@ -294,22 +284,24 @@ void chip8::emulateCycle(){
             break; 
 
         case 0xC000: //Opcode format: Cxkk. Set Vx = random byte AND kk. Generate random number from 0 to 255, and it with kk. Store result in Vx.
+        {
             unsigned char randomByte = rand() % 256;
             this->V[(this->opcode & 0x0F00) >> 8] = randomByte & (this->opcode & 0x00FF);
             this->pc += 2;
             break; 
-
+        }
         case 0xD000: //Opcode format: Dxyn. Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+        {
             unsigned char vx = this->V[(this->opcode & 0x0F00) >> 8] % 64;
 
             unsigned char vy = this->V[(this->opcode & 0x00F0) >> 4] % 32;
 
             this->V[0xF] = 0;
 
-            for (int i = 0; i < i < (this->opcode & 0x000F); i++) {
+            for (int i = 0; i < (this->opcode & 0x000F); i++) {
                 unsigned char pixel = this->memory[this->I + i];
                 for (int j = 0; j < 8; j++) {
-                    if (pixel & (0x80 >> j) != 0) {
+                    if ((pixel & (0x80 >> j)) != 0) {
                         if (this->gfx[(vx + j + ((vy + i) * 64))] == 1) {
                             this->V[0xF] = 1;
                         }
@@ -320,7 +312,7 @@ void chip8::emulateCycle(){
             this->drawFlag = true;
             this->pc += 2;
             break; 
-
+        }
         case 0xE000: //Opcode format: ExVW, where VW is either 9E of A1
             switch (this->opcode & 0x00FF) {
                 case 0x009E: //Opcode format: Ex9E. Skip next instruction if key with value of Vx is pressed. If key corresponding to value in Vx is pressed, increment PC by 4
@@ -352,6 +344,7 @@ void chip8::emulateCycle(){
                     break;
 
                 case 0x000A: //Opcode format: Fx0A. Wait for key press. Store value of key in Vx.
+                {
                     bool keyFound = false;
                     for (unsigned int i = 0; i < 16; i++) {
                         if (this->key[i]) {
@@ -364,7 +357,7 @@ void chip8::emulateCycle(){
                         this->pc -= 2;
                     }
                     break;
-
+                }
                 case 0x009E: //Opcode format: Ex9E. Skip next instruction if key with value of Vx is pressed. If key corresponding to value in Vx is pressed, increment PC by 4
                     if(this->key[this->V[(this->opcode & 0x0F00) >> 8]] == 1) {
                         this->pc += 4;
@@ -391,9 +384,7 @@ void chip8::emulateCycle(){
                     break;
 
                 case 0x0029: //Opcode format: Fx29. Set I = location of sprite for digit Vx.
-                    char vx = this->V[(this->opcode & 0x0F00) >> 8];
-                    int spritePosition = (vx % 16) * 5;
-                    this->I = &(this->memory[spritePosition]);
+                    this->I = this->V[(this->opcode & 0x0F00) >> 8] * 0x5;
                     this->pc += 2;
                     break;
 

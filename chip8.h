@@ -12,9 +12,6 @@ class Chip8 {
 
         unsigned short pc; //program counter has range from 0x000 to 0xFFF
 
-        unsigned char fontset[80];
-
-
         //Two timer registers that count at 60 Hz. Will count down to zero if currently non-zero
         unsigned char delayTimer;
 
